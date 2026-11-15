@@ -1,5 +1,6 @@
-﻿
-using UnityEngine;
+﻿using UnityEngine;
+using System.Collections.Generic;
+using UnityEditor;
 
 public class PlayerController : MonoBehaviour
 {
@@ -12,6 +13,8 @@ public class PlayerController : MonoBehaviour
     {
         // 현재 위치를 격자 좌표로 초기화
         currentPosition = new Vector2Int(2, 2);
+
+        unitStats = GetComponent<UnitStats>();
 
         transform.position =
             gridManager.GetWorldPosition(currentPosition);
@@ -42,6 +45,7 @@ public class PlayerController : MonoBehaviour
         if (clickedPosition == currentPosition)
         {
             isSelected = true;
+            CalculateMoveRange();
             Debug.Log("플레이어 선택!");
             return;
         }
@@ -54,13 +58,11 @@ public class PlayerController : MonoBehaviour
             Mathf.Abs(clickedPosition.x - currentPosition.x) +
             Mathf.Abs(clickedPosition.y - currentPosition.y);
 
-        // 상하좌우 한 칸만 이동 허용
-        if (distance != 1)
+        if (!reachablePositions.Contains(clickedPosition))
+        {
+            Debug.Log("이동할 수 없는 위치입니다.");
             return;
-
-        // 전장 밖으로 이동할 수 없음
-        if (!gridManager.IsInsideGrid(clickedPosition))
-            return;
+        }
 
         // 위치 갱신
         currentPosition = clickedPosition;
@@ -70,4 +72,49 @@ public class PlayerController : MonoBehaviour
 
         isSelected = false;
     }
+
+    private UnitStats unitStats;
+
+    private HashSet<Vector2Int> reachablePositions = new HashSet<Vector2Int>();
+
+    private Vector2Int[] diraction =
+    {
+        Vector2Int.up,
+        Vector2Int.down,
+        Vector2Int.left,
+        Vector2Int.right
+    };
+
+    private void CalculateMoveRange()
+    {
+        reachablePositions.Clear();
+
+        Queue<(Vector2Int position, int distance)> queue =
+            new Queue<(Vector2Int, int)>();
+
+        queue.Enqueue((currentPosition, 0));
+        reachablePositions.Add(currentPosition);
+
+        while (queue.Count > 0)
+        {
+            var current = queue.Dequeue();
+
+            if(current.distance >= unitStats.moveRange)
+                continue;
+
+            foreach(Vector2Int direction in diraction)
+            {
+                Vector2Int nextPosition = current.position + direction;
+                if (!gridManager.IsInsideGrid(nextPosition))
+                    continue;
+                if (reachablePositions.Contains(nextPosition))
+                    continue;
+                reachablePositions.Add(nextPosition);
+                queue.Enqueue((nextPosition, current.distance + 1));
+            }
+        }
+    }
+
+
+
 }
