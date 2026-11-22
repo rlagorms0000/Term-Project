@@ -1,47 +1,77 @@
-﻿using UnityEngine;
-using System.Collections.Generic;
-using UnityEditor;
+﻿using System.Collections.Generic;
+using UnityEngine;
+using UnityEngine.InputSystem;
 
+[RequireComponent(typeof(UnitStats), typeof(UnitManagementUI))]
 public class PlayerController : MonoBehaviour
 {
     public GridManager gridManager;
 
     private Vector2Int currentPosition;
     private bool isSelected = false;
-
-    void Start()
+    private UnitStats unitStats;
+    private UnitManagementUI unitManagementUI;
+    private readonly HashSet<Vector2Int> reachablePositions = new HashSet<Vector2Int>();
+    private readonly Vector2Int[] directions =
     {
-        // 현재 위치를 격자 좌표로 초기화
+        Vector2Int.up,
+        Vector2Int.down,
+        Vector2Int.left,
+        Vector2Int.right
+    };
+
+    private void Awake()
+    {
         currentPosition = new Vector2Int(2, 2);
-
         unitStats = GetComponent<UnitStats>();
+        unitManagementUI = GetComponent<UnitManagementUI>();
 
-        transform.position =
-            gridManager.GetWorldPosition(currentPosition);
-    }
+        if (gridManager == null)
+            gridManager = FindFirstObjectByType<GridManager>();
 
-    void Update()
-    {
-        if (Input.GetMouseButtonDown(0))
+        if (gridManager == null)
         {
-            HandleMouseClick();
+            Debug.LogError("PlayerController requires a GridManager.", this);
+            enabled = false;
+            return;
+        }
+
+        if (!gridManager.TryOccupyCell(currentPosition, gameObject))
+        {
+            Debug.LogError($"Player cannot occupy grid cell {currentPosition} because it is outside the grid or already occupied.", this);
+            enabled = false;
         }
     }
 
-    void HandleMouseClick()
+    private void Start()
     {
-        Vector3 mousePosition =
-            Camera.main.ScreenToWorldPoint(Input.mousePosition);
+        if (gridManager != null && enabled)
+            transform.position = gridManager.GetWorldPosition(currentPosition);
+    }
 
+    private void OnDestroy()
+    {
+        if (gridManager != null)
+            gridManager.ReleaseCell(currentPosition, gameObject);
+    }
+
+    private void Update()
+    {
+        if (Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame &&
+            !unitManagementUI.IsPointerOverWindow())
+            HandleMouseClick();
+    }
+
+    private void HandleMouseClick()
+    {
+        Vector3 mousePosition = Camera.main.ScreenToWorldPoint(Mouse.current.position.ReadValue());
         mousePosition.z = 0;
 
-        // 클릭한 위치를 격자 좌표로 변환
         Vector2Int clickedPosition = new Vector2Int(
             Mathf.RoundToInt(mousePosition.x),
             Mathf.RoundToInt(mousePosition.y)
         );
 
-        // 플레이어 선택
         if (clickedPosition == currentPosition)
         {
             isSelected = true;
@@ -53,37 +83,22 @@ public class PlayerController : MonoBehaviour
         if (!isSelected)
             return;
 
-        // 현재 위치와 클릭 위치의 거리 계산
-        int distance =
-            Mathf.Abs(clickedPosition.x - currentPosition.x) +
-            Mathf.Abs(clickedPosition.y - currentPosition.y);
-
         if (!reachablePositions.Contains(clickedPosition))
         {
             Debug.Log("이동할 수 없는 위치입니다.");
             return;
         }
 
-        // 위치 갱신
+        if (!gridManager.TryMoveOccupant(currentPosition, clickedPosition, gameObject))
+        {
+            Debug.Log("해당 칸은 이미 점유되어 있습니다.");
+            return;
+        }
+
         currentPosition = clickedPosition;
-
-        transform.position =
-            gridManager.GetWorldPosition(currentPosition);
-
+        transform.position = gridManager.GetWorldPosition(currentPosition);
         isSelected = false;
     }
-
-    private UnitStats unitStats;
-
-    private HashSet<Vector2Int> reachablePositions = new HashSet<Vector2Int>();
-
-    private Vector2Int[] diraction =
-    {
-        Vector2Int.up,
-        Vector2Int.down,
-        Vector2Int.left,
-        Vector2Int.right
-    };
 
     private void CalculateMoveRange()
     {
@@ -98,23 +113,21 @@ public class PlayerController : MonoBehaviour
         while (queue.Count > 0)
         {
             var current = queue.Dequeue();
-
-            if(current.distance >= unitStats.moveRange)
+            if (current.distance >= unitStats.EffectiveMoveRange)
                 continue;
 
-            foreach(Vector2Int direction in diraction)
+            foreach (Vector2Int direction in directions)
             {
                 Vector2Int nextPosition = current.position + direction;
-                if (!gridManager.IsInsideGrid(nextPosition))
+                if (!gridManager.IsInsideGrid(nextPosition) ||
+                    gridManager.IsCellOccupied(nextPosition) ||
+                    reachablePositions.Contains(nextPosition))
                     continue;
-                if (reachablePositions.Contains(nextPosition))
-                    continue;
+
                 reachablePositions.Add(nextPosition);
                 queue.Enqueue((nextPosition, current.distance + 1));
             }
         }
     }
-
-
 
 }

@@ -1,4 +1,5 @@
 ﻿
+using System.Collections.Generic;
 using UnityEngine;
 
 public class GridManager : MonoBehaviour
@@ -7,7 +8,9 @@ public class GridManager : MonoBehaviour
     public int height = 10;
     public float cellSize = 1f;
 
-    // 격자 좌표를 실제 월드 좌표로 변환
+    private readonly Dictionary<Vector2Int, GameObject> occupiedCells =
+        new Dictionary<Vector2Int, GameObject>();
+
     public Vector3 GetWorldPosition(Vector2Int gridPosition)
     {
         return new Vector3(
@@ -17,7 +20,6 @@ public class GridManager : MonoBehaviour
         );
     }
 
-    // 격자 좌표가 전장 내부에 있는지 확인
     public bool IsInsideGrid(Vector2Int position)
     {
         return position.x >= 0 &&
@@ -26,7 +28,51 @@ public class GridManager : MonoBehaviour
                position.y < height;
     }
 
-    // Scene 창에 격자 선 표시
+    public bool IsCellOccupied(Vector2Int position)
+    {
+        if (!occupiedCells.TryGetValue(position, out GameObject occupant))
+            return false;
+
+        if (occupant != null)
+            return true;
+
+        occupiedCells.Remove(position);
+        return false;
+    }
+
+    public bool TryOccupyCell(Vector2Int position, GameObject occupant)
+    {
+        if (!IsInsideGrid(position) || occupant == null)
+            return false;
+
+        if (IsCellOccupied(position) && occupiedCells[position] != occupant)
+            return false;
+
+        occupiedCells[position] = occupant;
+        return true;
+    }
+
+    public bool TryMoveOccupant(Vector2Int from, Vector2Int to, GameObject occupant)
+    {
+        if (occupant == null || !IsInsideGrid(to))
+            return false;
+
+        if (IsCellOccupied(to) && occupiedCells[to] != occupant)
+            return false;
+
+        occupiedCells[to] = occupant;
+        if (from != to && occupiedCells.TryGetValue(from, out GameObject currentOccupant) && currentOccupant == occupant)
+            occupiedCells.Remove(from);
+
+        return true;
+    }
+
+    public void ReleaseCell(Vector2Int position, GameObject occupant)
+    {
+        if (occupiedCells.TryGetValue(position, out GameObject currentOccupant) && currentOccupant == occupant)
+            occupiedCells.Remove(position);
+    }
+
     private void OnDrawGizmos()
     {
         Gizmos.color = Color.gray;
