@@ -48,6 +48,8 @@ public class UnitProgressionRecord
 public class UnitStats : MonoBehaviour
 {
     public int health = 100;
+    public int currentHealth = 100;
+    public Team team = Team.Player;
     public int attackPower = 10;
     public int defense = 5;
     public int moveRange = 3;
@@ -57,6 +59,8 @@ public class UnitStats : MonoBehaviour
     public float criticalMultiplier = 2.0f;
     public int attackPerTurn = 1;
     public int ZOCRange = 0;
+    public bool hasMove = false;
+    public bool hasActed = false;
 
     [SerializeField] private List<UnitProgressionRecord> progressionHistory = new List<UnitProgressionRecord>();
     [SerializeField] private List<UnitEquipment> inventory = new List<UnitEquipment>();
@@ -72,6 +76,8 @@ public class UnitStats : MonoBehaviour
 
     private void Awake()
     {
+        currentHealth = Mathf.Clamp(currentHealth, 0, health);
+
         if (progressionHistory == null)
             progressionHistory = new List<UnitProgressionRecord>();
 
@@ -93,6 +99,7 @@ public class UnitStats : MonoBehaviour
         {
             case UnitUpgradeType.Health:
                 health += 10;
+                currentHealth += 10;
                 description = "체력 +10";
                 break;
             case UnitUpgradeType.AttackPower:
@@ -217,12 +224,10 @@ public class UnitStats : MonoBehaviour
     public void TakeDamage(int damage)
     {
         int actualDamage = Mathf.Max(damage - EffectiveDefense, 0);
-        health -= actualDamage;
-        Debug.Log($"{gameObject.name} took {actualDamage} damage. Remaining health: {health}");
-        if (health <= 0)
-        {
+        currentHealth = Mathf.Max(currentHealth - actualDamage, 0);
+        Debug.Log($"{gameObject.name} took {actualDamage} damage. Remaining health: {currentHealth}");
+        if (currentHealth <= 0)
             Die();
-        }
     }
 
     private void Die()

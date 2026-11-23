@@ -130,6 +130,8 @@ GameObject:
   - component: {fileID: 459226672}
   - component: {fileID: 459226671}
   - component: {fileID: 459226673}
+  - component: {fileID: 459226674}
+  - component: {fileID: 459226675}
   m_Layer: 0
   m_Name: GridManager
   m_TagString: Untagged
@@ -182,6 +184,33 @@ MonoBehaviour:
   gridManager: {fileID: 459226671}
   lineColor: {r: 0.65, g: 0.7, b: 0.75, a: 0.8}
   lineWidth: 0.025
+--- !u!114 &459226674
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 459226670}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 23e3e9df5036daf4586004b066b21d58, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::TurnManager
+  PlayerTurn: 1
+  EnemyTurn: 0
+  enemyTurnDuration: 0.5
+--- !u!114 &459226675
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 459226670}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 842fdd76cb636f44b9c6d06838f9b88a, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::CombetSystem
 --- !u!1 &470207237
 GameObject:
   m_ObjectHideFlags: 0

@@ -7,17 +7,31 @@ public class CombetSystem : MonoBehaviour
     {
         if (Instance != null && Instance != this)
         {
-            Destroy(this.gameObject);
+            Destroy(this);
+            return;
         }
-        else
-        {
-            Instance = this;
-        }
+
+        Instance = this;
     }
-    public void ResolveCombat(UnitStats attacker, UnitStats defender)
+
+    private void OnDestroy()
     {
-        int damage = Mathf.Max(0, attacker.EffectiveAttackPower - defender.EffectiveDefense);
-        defender.health -= damage;
-        Debug.Log($"{attacker.name} attacked {defender.name} for {damage} damage. {defender.name} now has {defender.health} health.");
+        if (Instance == this)
+            Instance = null;
+    }
+
+    public bool ResolveCombat(UnitStats attacker, UnitStats defender)
+    {
+        if (attacker == null || defender == null || attacker.team == defender.team || defender.currentHealth <= 0)
+        {
+            Debug.LogWarning("Combat requires living units from opposing teams.", this);
+            return false;
+        }
+
+        int previousHealth = defender.currentHealth;
+        defender.TakeDamage(attacker.EffectiveAttackPower);
+        int damage = previousHealth - defender.currentHealth;
+        Debug.Log($"{attacker.name} attacked {defender.name} for {damage} damage. {defender.name} now has {defender.currentHealth} health.");
+        return true;
     }
 }

@@ -30,13 +30,20 @@ public class GridManager : MonoBehaviour
 
     public bool IsCellOccupied(Vector2Int position)
     {
-        if (!occupiedCells.TryGetValue(position, out GameObject occupant))
-            return false;
+        return TryGetOccupant(position, out _);
+    }
 
-        if (occupant != null)
-            return true;
+    public bool TryGetOccupant(Vector2Int position, out GameObject occupant)
+    {
+        if (occupiedCells.TryGetValue(position, out occupant))
+        {
+            if (occupant != null)
+                return true;
 
-        occupiedCells.Remove(position);
+            occupiedCells.Remove(position);
+        }
+
+        occupant = null;
         return false;
     }
 

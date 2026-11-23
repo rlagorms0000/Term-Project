@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 [RequireComponent(typeof(GridManager))]
@@ -6,8 +7,14 @@ public class GridOverlay : MonoBehaviour
     public GridManager gridManager;
     public Color lineColor = new Color(0.65f, 0.7f, 0.75f, 0.8f);
     public float lineWidth = 0.025f;
+    public Color moveHighlightColor = new Color(0.1f, 0.4f, 1f, 0.35f);
+    public Color attackHighlightColor = new Color(1f, 0.1f, 0.1f, 0.45f);
 
     private Material lineMaterial;
+    private Texture2D highlightTexture;
+    private Sprite highlightSprite;
+    private readonly Dictionary<Vector2Int, SpriteRenderer> highlightTiles =
+        new Dictionary<Vector2Int, SpriteRenderer>();
 
     private void Awake()
     {
@@ -27,7 +34,59 @@ public class GridOverlay : MonoBehaviour
 
         lineMaterial = new Material(shader);
         lineMaterial.name = "Runtime Grid Line Material";
+        highlightTexture = new Texture2D(1, 1, TextureFormat.RGBA32, false);
+        highlightTexture.name = "Runtime Grid Highlight Texture";
+        highlightTexture.SetPixel(0, 0, Color.white);
+        highlightTexture.Apply();
+        highlightTexture.filterMode = FilterMode.Point;
+        highlightSprite = Sprite.Create(highlightTexture, new Rect(0, 0, 1, 1), new Vector2(0.5f, 0.5f), 1f);
+        highlightSprite.name = "Runtime Grid Highlight Sprite";
         CreateGridLines();
+    }
+
+    public void SetHighlights(IEnumerable<Vector2Int> moveCells, IEnumerable<Vector2Int> attackCells)
+    {
+        HashSet<Vector2Int> activeCells = new HashSet<Vector2Int>();
+
+        foreach (Vector2Int cell in moveCells)
+        {
+            if (gridManager.IsInsideGrid(cell))
+            {
+                activeCells.Add(cell);
+                SetHighlight(cell, moveHighlightColor);
+            }
+        }
+
+        foreach (Vector2Int cell in attackCells)
+        {
+            if (gridManager.IsInsideGrid(cell))
+            {
+                activeCells.Add(cell);
+                SetHighlight(cell, attackHighlightColor);
+            }
+        }
+
+        foreach (KeyValuePair<Vector2Int, SpriteRenderer> tile in highlightTiles)
+            tile.Value.gameObject.SetActive(activeCells.Contains(tile.Key));
+    }
+
+    private void SetHighlight(Vector2Int cell, Color color)
+    {
+        if (!highlightTiles.TryGetValue(cell, out SpriteRenderer tile))
+        {
+            GameObject tileObject = new GameObject($"Grid Highlight {cell.x},{cell.y}");
+            tileObject.transform.SetParent(transform, false);
+            tileObject.transform.position = gridManager.GetWorldPosition(cell);
+            tileObject.transform.localScale = Vector3.one * gridManager.cellSize;
+
+            tile = tileObject.AddComponent<SpriteRenderer>();
+            tile.sprite = highlightSprite;
+            tile.sortingOrder = -2;
+            highlightTiles.Add(cell, tile);
+        }
+
+        tile.color = color;
+        tile.gameObject.SetActive(true);
     }
 
     private void CreateGridLines()
@@ -74,11 +133,18 @@ public class GridOverlay : MonoBehaviour
     private void OnDestroy()
     {
         if (lineMaterial != null)
-        {
-            if (Application.isPlaying)
-                Destroy(lineMaterial);
-            else
-                DestroyImmediate(lineMaterial);
-        }
+            DestroyRuntimeObject(lineMaterial);
+        if (highlightSprite != null)
+            DestroyRuntimeObject(highlightSprite);
+        if (highlightTexture != null)
+            DestroyRuntimeObject(highlightTexture);
+    }
+
+    private void DestroyRuntimeObject(Object runtimeObject)
+    {
+        if (Application.isPlaying)
+            Destroy(runtimeObject);
+        else
+            DestroyImmediate(runtimeObject);
     }
 }

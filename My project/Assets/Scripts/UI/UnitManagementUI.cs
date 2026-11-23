@@ -35,9 +35,17 @@ public class UnitManagementUI : MonoBehaviour
 
     private void DrawWindow(int windowId)
     {
+        TurnManager turnManager = TurnManager.Instance;
+        if (turnManager != null)
+        {
+            GUILayout.Label(turnManager.PlayerTurn ? "아군 턴" : "적 턴 (행동 없음)");
+            if (turnManager.PlayerTurn && GUILayout.Button("턴 종료"))
+                turnManager.EndPlayerTurn();
+        }
+
         scrollPosition = GUILayout.BeginScrollView(scrollPosition);
 
-        GUILayout.Label($"체력 {unitStats.health} | 공격력 {unitStats.EffectiveAttackPower} | 방어력 {unitStats.EffectiveDefense}");
+        GUILayout.Label($"체력 {unitStats.currentHealth}/{unitStats.health} | 공격력 {unitStats.EffectiveAttackPower} | 방어력 {unitStats.EffectiveDefense}");
         GUILayout.Label($"이동 거리 {unitStats.EffectiveMoveRange} | 공격 거리 {unitStats.attackRange} | 치명타 {unitStats.criticalChance:P0}");
         GUILayout.Space(8);
         GUILayout.Label("능력치 강화 (체력 +10, 그 외 +1 / 치명타 +5%)");
